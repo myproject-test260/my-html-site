@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポケモン情報検索</title>
+<style>
+:root {
+  --background-color: #f5f5f5;
+  --text-color: #333;
+  --card-background: #ffffff;
+  --table-border-color: #e0e0e0;
+  --table-background-color: #fafafa;
+  --table-row-hover-background: #f5f5f5;
+  --error-color: #ff4d4d;
+  --national-dex-number-color: #0066cc;
+  --button-background: #4a90e2;
+  --button-hover: #357abd;
+  --shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #121212;
+    --text-color: #e0e0e0;
+    --card-background: #1e1e1e;
+    --table-border-color: #333;
+    --table-background-color: #252525;
+    --table-row-hover-background: #2a2a2a;
+    --national-dex-number-color: #ffaa00;
+    --button-background: #2d5f8d;
+    --button-hover: #4a90e2;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  padding: 20px;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2rem;
+}
+
+.search-section {
+  background: var(--card-background);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+
+.search-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-controls label {
+  font-weight: 600;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 250px;
+}
+
+.navigation-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+input[type="number"],
+input[type="text"] {
+  padding: 10px 15px;
+  font-size: 1rem;
+  border: 2px solid var(--table-border-color);
+  border-radius: 8px;
+  background: var(--card-background);
+  color: var(--text-color);
+  flex: 1;
+  min-width: 120px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  background-color: var(--button-background);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+button:hover {
+  background-color: var(--button-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.navigation-buttons button {
+  padding: 8px 16px;
+  min-width: 50px;
+}
+
+.pokemon-name-header {
+  background: var(--card-background);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.pokemon-name-header h2 {
+  margin: 0;
+  font-size: 2.5rem;
+  color: var(--national-dex-number-color);
+}
+
+.pokemon-name-header .generation {
+  color: #888;
+  font-size: 1rem;
+  margin-top: 5px;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .content-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.card {
+  background: var(--card-background);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+  border-bottom: 2px solid var(--table-border-color);
+  padding-bottom: 10px;
+}
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 10px;
+}
+
+.image-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.image-frame img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--table-background-color);
+  padding: 10px;
+}
+
+.image-label {
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 500;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--table-border-color);
+}
+
+th {
+  background-color: var(--table-background-color);
+  font-weight: 600;
+  width: 40%;
+}
+
+tr:hover {
+  background-color: var(--table-row-hover-background);
+}
+
+tr:last-child th,
+tr:last-child td {
+  border-bottom: none;
+}
+
+.error-message {
+  color: var(--error-color);
+  text-align: center;
+  padding: 20px;
+  background: var(--card-background);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.hidden-ability {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.hidden {
+  display: none;
+}
+
+.pokemon-dex-number a {
+  color: var(--national-dex-number-color);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.pokemon-dex-number a:hover {
+  text-decoration: underline;
+}
+
+.pokemon-dex-number a:visited {
+  color: #999999;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pokemon-dex-number a:visited {
+    color: #aaaaaa;
+  }
+}
+
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  background: var(--card-background);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(74, 144, 226, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--button-background);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.search-hint {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 5px;
+}
+
+.tabs {
+  background: var(--card-background);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.tab-buttons {
+  display: flex;
+  border-bottom: 2px solid var(--table-border-color);
+  background: var(--table-background-color);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 15px 20px;
+  background: transparent;
+  color: var(--text-color);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s;
+  position: relative;
+  box-shadow: none;
+}
+
+.tab-button:hover {
+  background-color: var(--table-row-hover-background);
+  transform: none;
+}
+
+.tab-button.active {
+  background-color: var(--card-background);
+  color: var(--national-dex-number-color);
+}
+
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--national-dex-number-color);
+}
+
+.tab-content {
+  padding: 20px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  .pokemon-name-header h2 {
+    font-size: 1.8rem;
+  }
+  
+  .search-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-input-group {
+    flex-direction: column;
+  }
+  
+  input[type="number"],
+  input[type="text"] {
+    width: 100%;
+  }
+  
+  .image-frame img {
+    width: 120px;
+    height: 120px;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 ポケモン情報検索 v510261</h1>
+    
+    <div class="search-section">
+      <div class="search-controls">
+        <div class="search-input-group">
+          <input type="text" id="pokemonName" placeholder="例: ピカチュウ、Pikachu">
+          <input type="number" id="pokemonId" min="1" placeholder="例: 25">
+        </div>
+        <button onclick="searchPokemon()">🔎 検索</button>
+        <button onclick="clearAll()" style="background-color: #e74c3c;">🗑️ クリア</button>
+      </div>
+      <div class="search-hint">
+        💡 名前の一部でも検索できます（例: ピカ、リザ、chu など）
+      </div>
+      
+      <div class="navigation-buttons">
+        <button onclick="navigateDex(-30)">-30</button>
+        <button onclick="navigateDex(-10)">-10</button>
+        <button onclick="navigateDex(-5)">-5</button>
+        <button onclick="navigateDex(-1)">-1</button>
+        <button onclick="navigateDex(1)">+1</button>
+        <button onclick="navigateDex(5)">+5</button>
+        <button onclick="navigateDex(10)">+10</button>
+        <button onclick="navigateDex(30)">+30</button>
+      </div>
+    </div>
+    
+    <div id="loadingMessage" class="hidden">
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <span>読み込み中...</span>
+      </div>
+    </div>
+    
+    <div id="pokemonInfo"></div>
+    
+    <div id="pokemonNameHeader" class="pokemon-name-header hidden"></div>
+    
+    <div id="pokemonTabs" class="tabs hidden">
+      <div class="tab-buttons">
+        <button class="tab-button active" onclick="switchTab('image')">🖼️ 画像</button>
+        <button class="tab-button" onclick="switchTab('basic')">📊 基本情報</button>
+        <button class="tab-button" onclick="switchTab('dex')">📖 図鑑情報</button>
+      </div>
+      
+      <div class="tab-content">
+        <div id="imageTab" class="tab-panel active">
+          <div id="pokemonImage"></div>
+        </div>
+        
+        <div id="basicTab" class="tab-panel">
+          <table id="pokemonBasicInfo"></table>
+        </div>
+        
+        <div id="dexTab" class="tab-panel">
+          <table id="pokemonDexInfo"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const cache = {};
+let nameToIdCache = null;
+
+const clearAll = () => {
+  const nameInput = document.getElementById('pokemonName');
+  const idInput = document.getElementById('pokemonId');
+  nameInput.value = '';
+  idInput.value = '';
+  document.getElementById('pokemonInfo').innerHTML = '';
+  document.getElementById('pokemonNameHeader').classList.add('hidden');
+  document.getElementById('pokemonTabs').classList.add('hidden');
+};
+
+const switchTab = (tabName) => {
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+  
+  const buttons = document.querySelectorAll('.tab-button');
+  if (tabName === 'image') buttons[0].classList.add('active');
+  else if (tabName === 'basic') buttons[1].classList.add('active');
+  else if (tabName === 'dex') buttons[2].classList.add('active');
+  
+  document.getElementById(tabName + 'Tab').classList.add('active');
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const nameInput = document.getElementById('pokemonName');
+  const idInput = document.getElementById('pokemonId');
+
+  const handleEnter = async function(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      searchPokemon();
+    }
+  };
+
+  nameInput.addEventListener('keypress', handleEnter);
+  idInput.addEventListener('keypress', handleEnter);
+});
+
+const generationTranslations = {
+  "generation-i": "第1世代",
+  "generation-ii": "第2世代",
+  "generation-iii": "第3世代",
+  "generation-iv": "第4世代",
+  "generation-v": "第5世代",
+  "generation-vi": "第6世代",
+  "generation-vii": "第7世代",
+  "generation-viii": "第8世代",
+  "generation-ix": "第9世代",
+};
+
+const loadNameToIdMapping = async () => {
+  if (nameToIdCache) return nameToIdCache;
+  
+  try {
+    const response = await fetch('https://pokeapi.co/api/v2/pokemon-species?limit=2000');
+    if (!response.ok) throw new Error("ポケモンリストの取得に失敗しました。");
+    const data = await response.json();
+    
+    nameToIdCache = {};
+    
+    await Promise.all(data.results.map(async (pokemon) => {
+      try {
+        const speciesResponse = await fetch(pokemon.url);
+        const speciesData = await speciesResponse.json();
+        const id = speciesData.id;
+        
+        const japaneseName = speciesData.names.find(n => n.language.name === "ja")?.name;
+        if (japaneseName) {
+          nameToIdCache[japaneseName.toLowerCase()] = id;
+        }
+        
+        const englishName = speciesData.names.find(n => n.language.name === "en")?.name;
+        if (englishName) {
+          nameToIdCache[englishName.toLowerCase()] = id;
+        }
+        
+        nameToIdCache[speciesData.name.toLowerCase()] = id;
+      } catch (error) {
+        console.error(`Failed to load ${pokemon.name}:`, error);
+      }
+    }));
+    
+    return nameToIdCache;
+  } catch (error) {
+    console.error("名前マッピングの読み込みに失敗:", error);
+    return {};
+  }
+};
+
+const searchPokemon = async () => {
+  const nameInput = document.getElementById('pokemonName').value.trim();
+  const idInput = document.getElementById('pokemonId').value.trim();
+  
+  if (idInput) {
+    fetchPokemonDetails(idInput);
+  } else if (nameInput) {
+    clearAll();
+    document.getElementById('loadingMessage').classList.remove('hidden');
+    
+    const mapping = await loadNameToIdMapping();
+    document.getElementById('loadingMessage').classList.add('hidden');
+    
+    const searchKey = nameInput.toLowerCase();
+    
+    let pokemonId = mapping[searchKey];
+    
+    if (!pokemonId) {
+      const matches = Object.keys(mapping).filter(name => name.includes(searchKey));
+      
+      if (matches.length === 1) {
+        pokemonId = mapping[matches[0]];
+      } else if (matches.length > 1) {
+        const suggestions = matches.slice(0, 10).map(name => {
+          const id = mapping[name];
+          return `<li style="cursor:pointer; padding:5px; margin:5px 0; background:var(--table-background-color); border-radius:4px;" onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${id}'; fetchPokemonDetails('${id}');">${name} (No.${id})</li>`;
+        }).join('');
+        
+        document.getElementById('pokemonInfo').innerHTML = 
+          `<div class="error-message">
+            <p>「${nameInput}」に一致する候補が${matches.length}件見つかりました。</p>
+            <p style="font-size:0.9rem; margin-top:10px;">以下から選択してください：</p>
+            <ul style="list-style:none; padding:0; text-align:left; max-width:400px; margin:10px auto;">${suggestions}</ul>
+            ${matches.length > 10 ? '<p style="font-size:0.85rem; color:#888;">（最初の10件を表示）</p>' : ''}
+          </div>`;
+        return;
+      }
+    }
+    
+    if (pokemonId) {
+      document.getElementById('pokemonId').value = pokemonId;
+      fetchPokemonDetails(pokemonId.toString());
+    } else {
+      document.getElementById('pokemonInfo').innerHTML = 
+        `<p class="error-message">「${nameInput}」という名前のポケモンが見つかりません。<br>日本語名または英語名で入力してください。</p>`;
+    }
+  } else {
+    document.getElementById('pokemonInfo').innerHTML = 
+      `<p class="error-message">ポケモン名または図鑑番号を入力してください。</p>`;
+  }
+};
+
+const fetchColorJapaneseName = async (colorUrl) => {
+  const response = await fetch(colorUrl);
+  if (!response.ok) throw new Error("色情報の取得に失敗しました。");
+  const colorData = await response.json();
+  const japaneseName = colorData.names.find(name => name.language.name === "ja")?.name ?? "不明";
+  return japaneseName; 
+};
+
+const fetchTypeJapaneseNames = async (types) => {
+  try {
+    const typeNames = await Promise.all(types.map(async typeInfo => {
+      const response = await fetch(typeInfo.type.url);
+      if (!response.ok) throw new Error("タイプの日本語名の取得に失敗しました。");
+      const data = await response.json();
+      const japaneseName = data.names.find(name => name.language.name === "ja").name;
+      return japaneseName;
+    }));
+    return typeNames.join(', ');
+  } catch (error) {
+    console.error("タイプの日本語名の取得に失敗しました:", error);
+    return "不明"; 
+  }
+};
+
+const fetchAbilityJapaneseNames = async (abilities) => {
+  return Promise.all(
+    abilities.map(async (ability) => {
+      const url = ability.ability.url;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("特性名の取得に失敗しました。");
+      const data = await res.json();
+      let japaneseName = data.names.find(name => name.language.name === "ja")?.name;
+      if (ability.is_hidden) {
+        japaneseName = `<span class="hidden-ability">${japaneseName} (夢)</span>`;
+      } else {
+        japaneseName = `<span>${japaneseName}</span>`;
+      }
+      return japaneseName || `<span>${ability.ability.name}</span>`;
+    })
+  );
+};
+
+const fetchEggGroupJapaneseNames = async (eggGroups) => {
+  const eggGroupNames = await Promise.all(
+    eggGroups.map(async group => {
+      const url = group.url;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("タマゴグループ名の取得に失敗しました。");
+      const data = await res.json();
+      return data.names.find(name => name.language.name === "ja-Hrkt")?.name ?? group.name;
+    })
+  );
+  return eggGroupNames.join(", ");
+};
+
+const fetchEvolutionChain = async (evolutionChainUrl) => {
+  try {
+    const response = await fetch(evolutionChainUrl);
+    if (!response.ok) return null;
+    const data = await response.json();
+    
+    const allEvolutions = [];
+    
+    const processChain = async (evoData, depth = 0) => {
+      const speciesUrl = evoData.species.url;
+      const speciesId = speciesUrl.split('/').filter(x => x).pop();
+      
+      const speciesResponse = await fetch(speciesUrl);
+      const speciesData = await speciesResponse.json();
+      const japaneseName = speciesData.names.find(n => n.language.name === "ja")?.name || evoData.species.name;
+      
+      const evolutionInfo = {
+        name: japaneseName,
+        id: speciesId,
+        depth: depth,
+        evolvesTo: []
+      };
+      
+      if (evoData.evolves_to && evoData.evolves_to.length > 0) {
+        for (const nextEvo of evoData.evolves_to) {
+          const childEvo = await processChain(nextEvo, depth + 1);
+          evolutionInfo.evolvesTo.push(childEvo);
+        }
+      }
+      
+      return evolutionInfo;
+    };
+    
+    const tree = await processChain(data.chain);
+    
+    const flattenTree = (node, result = []) => {
+      if (!result[node.depth]) {
+        result[node.depth] = [];
+      }
+      result[node.depth].push({
+        name: node.name,
+        id: node.id
+      });
+      
+      for (const child of node.evolvesTo) {
+        flattenTree(child, result);
+      }
+      
+      return result;
+    };
+    
+    return {
+      tree: tree,
+      flattened: flattenTree(tree)
+    };
+  } catch (error) {
+    console.error("進化情報の取得に失敗:", error);
+    return null;
+  }
+};
+
+const fetchPokemonDetails = async (pokemonId) => {
+  const pokemonIdTrimmed = pokemonId.trim();
+  if (!pokemonIdTrimmed || isNaN(pokemonIdTrimmed) || parseInt(pokemonIdTrimmed) < 1) {
+    clearAll();
+    document.getElementById('pokemonInfo').innerHTML = `<p class="error-message">有効な全国図鑑No.を入力してください。</p>`;
+    return;
+  }
+
+  if (cache[pokemonIdTrimmed]) {
+    const cachedData = cache[pokemonIdTrimmed];
+    createInfoTable(cachedData.speciesData, cachedData.pokemonData, cachedData.japaneseName, cachedData.imageUrl, cachedData.shinyImageUrl, cachedData.colorJapaneseName, cachedData.typeJapaneseNames, cachedData.weight, cachedData.abilitiesJapaneseNames, cachedData.height, cachedData.eggGroupJapaneseNames, cachedData.generationJapaneseName, cachedData.evolutionChain);
+    return;
+  }
+
+  clearAll();
+  document.getElementById('loadingMessage').classList.remove('hidden');
+
+  try {
+    const [speciesData, pokemonData] = await Promise.all([
+      fetch(`https://pokeapi.co/api/v2/pokemon-species/${pokemonIdTrimmed}/`).then(res => {
+        if (!res.ok) throw new Error("指定されたIDのポケモンが見つかりません。");
+        return res.json();
+      }),
+      fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonIdTrimmed}/`).then(res => {
+        if (!res.ok) throw new Error("指定されたIDのポケモンが見つかりません。");
+        return res.json();
+      }),
+    ]);
+
+    const [typeJapaneseNames, colorJapaneseName, abilitiesJapaneseNames, eggGroupJapaneseNames] = await Promise.all([
+      fetchTypeJapaneseNames(pokemonData.types),
+      fetchColorJapaneseName(speciesData.color.url),
+      fetchAbilityJapaneseNames(pokemonData.abilities),
+      fetchEggGroupJapaneseNames(speciesData.egg_groups)
+    ]);
+    
+    const evolutionChain = await fetchEvolutionChain(speciesData.evolution_chain.url);
+
+    const japaneseName = speciesData.names.find(name => name.language.name === "ja")?.name ?? "不明";
+    const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/${pokemonIdTrimmed}.png`;
+    const shinyImageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/shiny/${pokemonIdTrimmed}.png`;
+    const weight = pokemonData.weight;
+    const height = pokemonData.height;
+    const generationJapaneseName = generationTranslations[speciesData.generation.name] || speciesData.generation.name;
+
+    const pokemonDataForCache = {
+      speciesData,
+      pokemonData,
+      japaneseName,
+      imageUrl,
+      shinyImageUrl,
+      colorJapaneseName,
+      typeJapaneseNames,
+      weight,
+      abilitiesJapaneseNames,
+      height,
+      eggGroupJapaneseNames,
+      generationJapaneseName,
+      evolutionChain
+    };
+    cache[pokemonIdTrimmed] = pokemonDataForCache;
+
+    createInfoTable(speciesData, pokemonData, japaneseName, imageUrl, shinyImageUrl, colorJapaneseName, typeJapaneseNames, weight, abilitiesJapaneseNames, height, eggGroupJapaneseNames, generationJapaneseName, evolutionChain);
+
+    document.getElementById('pokemonNameHeader').classList.remove('hidden');
+    document.getElementById('pokemonTabs').classList.remove('hidden');
+  } catch (error) {
+    console.error(error);
+    clearAll();
+    document.getElementById('pokemonInfo').innerHTML = `<p class="error-message">${error.message}</p>`;
+  } finally {
+    document.getElementById('loadingMessage').classList.add('hidden');
+  }
+};
+
+const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shinyImageUrl, colorJapaneseName, typeJapaneseNames, weight, abilities, height, eggGroupJapaneseNames, generationJapaneseName, evolutionChain) => {
+  const formattedNationalNumber = speciesData.id.toString().padStart(4, '0');
+  
+  document.getElementById('pokemonNameHeader').innerHTML = `
+    <h2>${japaneseName}</h2>
+    <div class="generation">No. ${formattedNationalNumber} | ${generationJapaneseName}</div>
+  `;
+
+  const createImageHtml = (url, alt, label) => {
+    if (url) {
+      return `
+      <div class="image-frame">
+        <img src="${url}" alt="${alt}" class="pokemon-image" />
+        <div class="image-label">${label}</div>
+      </div>`;
+    } else {
+      return `<span>画像なし</span>`;
+    }
+  };
+
+  const weightInKilograms = weight / 10;
+  const heightInMeters = height / 10;
+  const abilitiesFormatted = abilities.join(', ');
+
+  const basicTableBody = document.createElement('tbody');
+  const basicInfoPairs = [
+    { label: '色', value: colorJapaneseName },
+    { label: 'タイプ', value: typeJapaneseNames },
+    { label: '特性', value: abilitiesFormatted },
+    { label: '重さ', value: `${weightInKilograms} kg` },
+    { label: '高さ', value: `${heightInMeters} m` },
+    { label: 'タマゴグループ', value: eggGroupJapaneseNames }
+  ];
+  
+  if (evolutionChain && evolutionChain.flattened && evolutionChain.flattened.length > 1) {
+    const renderEvolutionLevel = (level, currentPokemonId) => {
+      return level.map(evo => {
+        const isCurrentPokemon = evo.id === currentPokemonId;
+        const style = isCurrentPokemon 
+          ? 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--national-dex-number-color); border-radius:8px; font-weight:bold; color:var(--national-dex-number-color); text-align:center; vertical-align:top;' 
+          : 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
+        const hoverStyle = isCurrentPokemon ? '' : 'onmouseover="this.style.borderColor=\'var(--national-dex-number-color)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--table-border-color)\'; this.style.transform=\'translateY(0)\'"';
+        const onclick = isCurrentPokemon ? '' : `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${evo.id}'; fetchPokemonDetails('${evo.id}');"`;
+        return `<span style="${style}" ${onclick} ${hoverStyle}>${evo.name}<br><small style="color:#888;">No.${evo.id.padStart(4, '0')}</small></span>`;
+      }).join(' ');
+    };
+    
+    const evolutionHtml = evolutionChain.flattened.map((level, index) => {
+      const levelHtml = renderEvolutionLevel(level, speciesData.id.toString());
+      const arrow = index < evolutionChain.flattened.length - 1 
+        ? '<div style="text-align:center; margin:8px 0; font-size:1.5rem; color:#888;">↓</div>' 
+        : '';
+      return `<div style="text-align:center; margin:8px 0;">${levelHtml}</div>${arrow}`;
+    }).join('');
+    
+    basicInfoPairs.push({ label: '進化', value: `<div style="padding:10px;">${evolutionHtml}</div>` });
+  }
+
+  basicInfoPairs.forEach(pair => {
+    const row = document.createElement('tr');
+    const th = document.createElement('th');
+    th.textContent = pair.label;
+    const td = document.createElement('td');
+    td.innerHTML = pair.value;
+    row.appendChild(th);
+    row.appendChild(td);
+    basicTableBody.appendChild(row);
+  });
+
+  document.getElementById('pokemonBasicInfo').innerHTML = '';
+  document.getElementById('pokemonBasicInfo').appendChild(basicTableBody);
+
+  document.getElementById('pokemonImage').innerHTML = `
+    <div class="image-container">
+      ${createImageHtml(imageUrl, japaneseName + 'の通常画像', '通常')}
+      ${createImageHtml(shinyImageUrl, japaneseName + 'の色違い画像', '色違い')}
+    </div>
+  `;
+
+  const dexTableBody = document.createElement('tbody');
+  speciesData.pokedex_numbers.forEach(entry => {
+    const row = document.createElement('tr');
+    const pokedexName = pokedexNameTranslations[entry.pokedex.name] || entry.pokedex.name;
+    const formattedNumber = entry.pokedex.name === "national" ? entry.entry_number.toString().padStart(4, '0') : entry.entry_number.toString().padStart(3, '0');
+    const url = entry.pokedex.name === "national" ? `https://zukan.pokemon.co.jp/detail/${formattedNumber}` : '#';
+    const td1 = document.createElement('td');
+    td1.textContent = pokedexName;
+    const td2 = document.createElement('td');
+    td2.className = 'pokemon-dex-number';
+    if (entry.pokedex.name === "national") {
+      td2.innerHTML = `<a href="${url}" target="_blank">${formattedNumber}</a>`;
+    } else {
+      td2.textContent = formattedNumber;
+    }
+    row.appendChild(td1);
+    row.appendChild(td2);
+    dexTableBody.appendChild(row);
+  });
+  document.getElementById('pokemonDexInfo').innerHTML = '';
+  document.getElementById('pokemonDexInfo').appendChild(dexTableBody);
+};
+
+const pokedexNameTranslations = {
+  "national": "全国図鑑",
+  "kanto": "カントー図鑑",
+  "original-johto": "ジョウト図鑑",
+  "hoenn": "ホウエン図鑑",
+  "original-sinnoh": "シンオウ図鑑",
+  "extended-sinnoh": "シンオウ図鑑",
+  "updated-johto": "新ジョウト図鑑",
+  "original-unova": "イッシュ図鑑",
+  "updated-unova": "イッシュ図鑑",
+  "conquest-gallery": "ノブナガの野望図鑑",
+  "kalos-central": "セントラルカロス図鑑",
+  "kalos-coastal": "コーストカロス図鑑",
+  "kalos-mountain": "マウンテンカロス図鑑",
+  "updated-hoenn": "新ホウエン図鑑",
+  "original-alola": "アローラ図鑑",
+  "original-melemele": "メレメレ図鑑",
+  "original-akala": "アーカラ図鑑",
+  "original-ulaula": "ウラウラ図鑑",
+  "original-poni": "ポニ図鑑",
+  "updated-alola": "新アローラ図鑑",
+  "updated-melemele": "新メレメレ図鑑",
+  "updated-akala": "新アーカラ図鑑",
+  "updated-ulaula": "新ウラウラ図鑑",
+  "updated-poni": "新ポニ図鑑",
+  "letsgo-kanto": "Let's Go!カントー図鑑",
+  "galar": "剣盾:ガラル図鑑",
+  "isle-of-armor": "剣盾:ヨロイじま図鑑",
+  "crown-tundra": "剣盾:カンムリせつげん図鑑",
+  "hisui": "ヒスイ図鑑",
+  "paldea": "SV:パルデア図鑑",
+  "kitakami": "SV:キタカミ図鑑",
+  "blueberry": "SV:ブルーベリー図鑑",
+  "lumiose-city": "ミアレシティ図鑑"
+};
+
+const navigateDex = (offset) => {
+  const inputElement = document.getElementById('pokemonId');
+  let currentNumber = parseInt(inputElement.value, 10);
+  if (isNaN(currentNumber) || currentNumber < 1) {
+    currentNumber = 0;
+  }
+  let newNumber = currentNumber + offset;
+  newNumber = newNumber < 1 ? 1 : newNumber;
+  inputElement.value = newNumber;
+  document.getElementById('pokemonName').value = '';
+  fetchPokemonDetails(newNumber.toString());
+};
+</script>
+</body>
+</html>
