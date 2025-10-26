@@ -397,7 +397,7 @@ tr:last-child td {
 </head>
 <body>
   <div class="container">
-    <h1>🔍 ポケモン情報検索 v510268</h1>
+    <h1>🔍 ポケモン情報検索 v510269</h1>
     
     <div class="search-section">
       <div class="search-controls">
@@ -410,17 +410,6 @@ tr:last-child td {
       </div>
       <div class="search-hint">
         💡 名前の一部でも検索できます（例: ピカ、リザ、chu など）
-      </div>
-      
-      <div class="navigation-buttons">
-        <button onclick="navigateDex(-30)">-30</button>
-        <button onclick="navigateDex(-10)">-10</button>
-        <button onclick="navigateDex(-5)">-5</button>
-        <button onclick="navigateDex(-1)">-1</button>
-        <button onclick="navigateDex(1)">+1</button>
-        <button onclick="navigateDex(5)">+5</button>
-        <button onclick="navigateDex(10)">+10</button>
-        <button onclick="navigateDex(30)">+30</button>
       </div>
     </div>
     
@@ -473,9 +462,11 @@ const clearAll = () => {
 };
 
 const switchTab = (tabName) => {
+  // すべてのタブボタンとパネルから active クラスを削除
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
   
+  // 選択されたタブをアクティブに
   const buttons = document.querySelectorAll('.tab-button');
   if (tabName === 'image') buttons[0].classList.add('active');
   else if (tabName === 'basic') buttons[1].classList.add('active');
@@ -527,16 +518,19 @@ const loadNameToIdMapping = async () => {
         const speciesData = await speciesResponse.json();
         const id = speciesData.id;
         
+        // 日本語名を登録
         const japaneseName = speciesData.names.find(n => n.language.name === "ja")?.name;
         if (japaneseName) {
           nameToIdCache[japaneseName.toLowerCase()] = id;
         }
         
+        // 英語名を登録
         const englishName = speciesData.names.find(n => n.language.name === "en")?.name;
         if (englishName) {
           nameToIdCache[englishName.toLowerCase()] = id;
         }
         
+        // API名も登録（念のため）
         nameToIdCache[speciesData.name.toLowerCase()] = id;
       } catch (error) {
         console.error(`Failed to load ${pokemon.name}:`, error);
@@ -565,14 +559,18 @@ const searchPokemon = async () => {
     
     const searchKey = nameInput.toLowerCase();
     
+    // 完全一致を試す
     let pokemonId = mapping[searchKey];
     
+    // 完全一致しない場合、部分一致検索
     if (!pokemonId) {
       const matches = Object.keys(mapping).filter(name => name.includes(searchKey));
       
       if (matches.length === 1) {
+        // 1件だけマッチした場合
         pokemonId = mapping[matches[0]];
       } else if (matches.length > 1) {
+        // 複数マッチした場合、候補を表示
         const suggestions = matches.slice(0, 10).map(name => {
           const id = mapping[name];
           return `<li style="cursor:pointer; padding:5px; margin:5px 0; background:var(--table-background-color); border-radius:4px;" onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${id}'; fetchPokemonDetails('${id}');">${name} (No.${id})</li>`;
@@ -663,12 +661,14 @@ const fetchEvolutionChain = async (evolutionChainUrl) => {
     if (!response.ok) return null;
     const data = await response.json();
     
+    // 進化チェーン全体を再帰的に取得
     const allEvolutions = [];
     
     const processChain = async (evoData, depth = 0) => {
       const speciesUrl = evoData.species.url;
       const speciesId = speciesUrl.split('/').filter(x => x).pop();
       
+      // 種族データを取得して日本語名を取得
       const speciesResponse = await fetch(speciesUrl);
       const speciesData = await speciesResponse.json();
       const japaneseName = speciesData.names.find(n => n.language.name === "ja")?.name || evoData.species.name;
@@ -680,6 +680,7 @@ const fetchEvolutionChain = async (evolutionChainUrl) => {
         evolvesTo: []
       };
       
+      // 進化先を処理
       if (evoData.evolves_to && evoData.evolves_to.length > 0) {
         for (const nextEvo of evoData.evolves_to) {
           const childEvo = await processChain(nextEvo, depth + 1);
@@ -692,6 +693,7 @@ const fetchEvolutionChain = async (evolutionChainUrl) => {
     
     const tree = await processChain(data.chain);
     
+    // ツリー構造を平坦化してレベルごとにグループ化
     const flattenTree = (node, result = []) => {
       if (!result[node.depth]) {
         result[node.depth] = [];
@@ -827,6 +829,7 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
     { label: 'タマゴグループ', value: eggGroupJapaneseNames }
   ];
   
+  // 進化情報を追加
   if (evolutionChain && evolutionChain.flattened && evolutionChain.flattened.length > 1) {
     const renderEvolutionLevel = (level, currentPokemonId) => {
       return level.map(evo => {
@@ -945,5 +948,4 @@ const navigateDex = (offset) => {
 };
 </script>
 </body>
-
 </html>
