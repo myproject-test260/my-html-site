@@ -397,7 +397,7 @@ tr:last-child td {
 </head>
 <body>
   <div class="container">
-    <h1>🔍 ポケモン情報検索 v510271</h1>
+    <h1>🔍 ポケモン情報検索 v510272</h1>
     
     <div class="search-section">
       <div class="search-controls">
@@ -905,8 +905,8 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
       return level.map(evo => {
         const isCurrentPokemon = evo.id === currentPokemonId;
         const style = isCurrentPokemon 
-          ? 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--national-dex-number-color); border-radius:8px; font-weight:bold; color:var(--national-dex-number-color); text-align:center; vertical-align:top;' 
-          : 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
+          ? 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--national-dex-number-color); border-radius:8px; font-weight:bold; color:var(--national-dex-number-color); text-align:center; vertical-align:top;' 
+          : 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
         const hoverStyle = isCurrentPokemon ? '' : 'onmouseover="this.style.borderColor=\'var(--national-dex-number-color)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--table-border-color)\'; this.style.transform=\'translateY(0)\'"';
         const onclick = isCurrentPokemon ? '' : `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${evo.id}'; fetchPokemonDetails('${evo.id}');"`;
         return `<span style="${style}" ${onclick} ${hoverStyle}>${evo.name}<br><small style="color:#888;">No.${evo.id.padStart(4, '0')}</small></span>`;
@@ -916,9 +916,9 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
     const evolutionHtml = evolutionChain.flattened.map((level, index) => {
       const levelHtml = renderEvolutionLevel(level, speciesData.id.toString());
       const arrow = index < evolutionChain.flattened.length - 1 
-        ? '<div style="text-align:center; margin:8px 0; font-size:1.5rem; color:#888;">↓</div>' 
+        ? '<div style="text-align:left; margin:8px 0; font-size:1.5rem; color:#888; padding-left:4px;">↓</div>' 
         : '';
-      return `<div style="text-align:center; margin:8px 0;">${levelHtml}</div>${arrow}`;
+      return `<div style="text-align:left; margin:8px 0;">${levelHtml}</div>${arrow}`;
     }).join('');
     
     basicInfoPairs.push({ label: '進化', value: `<div style="padding:10px;">${evolutionHtml}</div>` });
@@ -935,9 +935,9 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
       let html = '';
       
       if (megaForms.length > 0) {
-        html += '<div style="margin-bottom:12px;"><strong style="color:#ff6b6b;">メガシンカ:</strong><br>';
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#ff6b6b;">メガシンカ:</strong><br>';
         html += megaForms.map(form => {
-          const style = 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border:2px solid #764ba2; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
+          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border:2px solid #764ba2; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
           const hoverStyle = 'onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'"';
           const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
           return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small>No.${form.id.padStart(4, '0')}</small></span>`;
@@ -946,9 +946,9 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
       }
       
       if (gmaxForms.length > 0) {
-        html += '<div style="margin-bottom:12px;"><strong style="color:#ff6b6b;">キョダイマックス:</strong><br>';
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#ff6b6b;">キョダイマックス:</strong><br>';
         html += gmaxForms.map(form => {
-          const style = 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border:2px solid #f5576c; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
+          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border:2px solid #f5576c; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
           const hoverStyle = 'onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'"';
           const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
           return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small>No.${form.id.padStart(4, '0')}</small></span>`;
@@ -957,9 +957,9 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
       }
       
       if (regionalForms.length > 0) {
-        html += '<div style="margin-bottom:12px;"><strong style="color:#4a90e2;">リージョンフォーム:</strong><br>';
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#4a90e2;">リージョンフォーム:</strong><br>';
         html += regionalForms.map(form => {
-          const style = 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border:2px solid #00f2fe; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
+          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border:2px solid #00f2fe; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
           const hoverStyle = 'onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'"';
           const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
           return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small>No.${form.id.padStart(4, '0')}</small></span>`;
@@ -968,9 +968,9 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
       }
       
       if (otherForms.length > 0) {
-        html += '<div style="margin-bottom:12px;"><strong style="color:#888;">その他のフォーム:</strong><br>';
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#888;">その他のフォーム:</strong><br>';
         html += otherForms.map(form => {
-          const style = 'display:inline-block; width:140px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
+          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
           const hoverStyle = 'onmouseover="this.style.borderColor=\'var(--national-dex-number-color)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--table-border-color)\'; this.style.transform=\'translateY(0)\'"';
           const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
           return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small style="color:#888;">No.${form.id.padStart(4, '0')}</small></span>`;
