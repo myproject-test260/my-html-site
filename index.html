@@ -397,7 +397,7 @@ tr:last-child td {
 </head>
 <body>
   <div class="container">
-    <h1>🔍 ポケモン情報検索 v51026A</h1>
+    <h1>🔍 ポケモン情報検索 v510271</h1>
     
     <div class="search-section">
       <div class="search-controls">
@@ -428,6 +428,7 @@ tr:last-child td {
       <div class="tab-buttons">
         <button class="tab-button active" onclick="switchTab('image')">🖼️ 画像</button>
         <button class="tab-button" onclick="switchTab('basic')">📊 基本情報</button>
+        <button class="tab-button" onclick="switchTab('stats')">⚡ 種族値</button>
         <button class="tab-button" onclick="switchTab('dex')">📖 図鑑情報</button>
       </div>
       
@@ -438,6 +439,10 @@ tr:last-child td {
         
         <div id="basicTab" class="tab-panel">
           <table id="pokemonBasicInfo"></table>
+        </div>
+        
+        <div id="statsTab" class="tab-panel">
+          <div id="pokemonStats"></div>
         </div>
         
         <div id="dexTab" class="tab-panel">
@@ -468,7 +473,8 @@ const switchTab = (tabName) => {
   const buttons = document.querySelectorAll('.tab-button');
   if (tabName === 'image') buttons[0].classList.add('active');
   else if (tabName === 'basic') buttons[1].classList.add('active');
-  else if (tabName === 'dex') buttons[2].classList.add('active');
+  else if (tabName === 'stats') buttons[2].classList.add('active');
+  else if (tabName === 'dex') buttons[3].classList.add('active');
   
   document.getElementById(tabName + 'Tab').classList.add('active');
 };
@@ -1002,6 +1008,9 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
     </div>
   `;
 
+  // 種族値レーダーチャートを作成
+  createStatsRadarChart(pokemonData.stats);
+
   const dexTableBody = document.createElement('tbody');
   speciesData.pokedex_numbers.forEach(entry => {
     const row = document.createElement('tr');
@@ -1023,6 +1032,185 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
   });
   document.getElementById('pokemonDexInfo').innerHTML = '';
   document.getElementById('pokemonDexInfo').appendChild(dexTableBody);
+};
+
+const createStatsRadarChart = (stats) => {
+  const statNames = {
+    'hp': 'HP',
+    'attack': '攻撃',
+    'defense': '防御',
+    'special-attack': '特攻',
+    'special-defense': '特防',
+    'speed': '素早さ'
+  };
+  
+  const statsData = stats.map(stat => ({
+    name: statNames[stat.stat.name] || stat.stat.name,
+    value: stat.base_stat
+  }));
+  
+  const total = statsData.reduce((sum, stat) => sum + stat.value, 0);
+  
+  const container = document.getElementById('pokemonStats');
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+      <div style="text-align: center;">
+        <h3 style="margin: 0 0 10px 0; font-size: 1.5rem;">種族値合計: <span style="color: var(--national-dex-number-color); font-weight: bold;">${total}</span></h3>
+      </div>
+      <svg id="radarChart" width="400" height="400" viewBox="0 0 400 400" style="max-width: 100%;">
+      </svg>
+      <div id="statsTable" style="width: 100%; max-width: 400px;"></div>
+    </div>
+  `;
+  
+  const svg = document.getElementById('radarChart');
+  const centerX = 200;
+  const centerY = 200;
+  const maxRadius = 150;
+  const maxValue = 255;
+  const levels = 5;
+  
+  // 背景の同心円を描画
+  for (let i = levels; i > 0; i--) {
+    const radius = (maxRadius / levels) * i;
+    const opacity = 0.1 + (i / levels) * 0.1;
+    drawPolygon(svg, centerX, centerY, radius, 6, `rgba(74, 144, 226, ${opacity})`, 'none', 1);
+  }
+  
+  // 軸を描画
+  const angleStep = (Math.PI * 2) / 6;
+  statsData.forEach((stat, index) => {
+    const angle = angleStep * index - Math.PI / 2;
+    const x = centerX + Math.cos(angle) * maxRadius;
+    const y = centerY + Math.sin(angle) * maxRadius;
+    
+    // 軸線
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', centerX);
+    line.setAttribute('y1', centerY);
+    line.setAttribute('x2', x);
+    line.setAttribute('y2', y);
+    line.setAttribute('stroke', 'rgba(74, 144, 226, 0.3)');
+    line.setAttribute('stroke-width', '1');
+    svg.appendChild(line);
+    
+    // ラベル
+    const labelDistance = maxRadius + 30;
+    const labelX = centerX + Math.cos(angle) * labelDistance;
+    const labelY = centerY + Math.sin(angle) * labelDistance;
+    
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', labelX);
+    text.setAttribute('y', labelY);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('fill', 'var(--text-color)');
+    text.setAttribute('font-size', '14');
+    text.setAttribute('font-weight', '600');
+    text.textContent = stat.name;
+    svg.appendChild(text);
+    
+    // 値
+    const valueY = labelY + 18;
+    const valueText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    valueText.setAttribute('x', labelX);
+    valueText.setAttribute('y', valueY);
+    valueText.setAttribute('text-anchor', 'middle');
+    valueText.setAttribute('fill', 'var(--national-dex-number-color)');
+    valueText.setAttribute('font-size', '16');
+    valueText.setAttribute('font-weight', 'bold');
+    valueText.textContent = stat.value;
+    svg.appendChild(valueText);
+  });
+  
+  // データポリゴンを描画
+  const points = statsData.map((stat, index) => {
+    const angle = angleStep * index - Math.PI / 2;
+    const radius = (stat.value / maxValue) * maxRadius;
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
+    return `${x},${y}`;
+  }).join(' ');
+  
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('points', points);
+  polygon.setAttribute('fill', 'rgba(74, 144, 226, 0.3)');
+  polygon.setAttribute('stroke', 'rgb(74, 144, 226)');
+  polygon.setAttribute('stroke-width', '2');
+  svg.appendChild(polygon);
+  
+  // データポイントを描画
+  statsData.forEach((stat, index) => {
+    const angle = angleStep * index - Math.PI / 2;
+    const radius = (stat.value / maxValue) * maxRadius;
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
+    
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', '5');
+    circle.setAttribute('fill', 'rgb(74, 144, 226)');
+    circle.setAttribute('stroke', 'white');
+    circle.setAttribute('stroke-width', '2');
+    svg.appendChild(circle);
+  });
+  
+  // 統計テーブルを作成
+  const tableHTML = `
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background-color: var(--table-background-color);">
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--table-border-color);">ステータス</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 2px solid var(--table-border-color);">種族値</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--table-border-color);">ゲージ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${statsData.map(stat => {
+          const percentage = (stat.value / maxValue) * 100;
+          const barColor = stat.value >= 150 ? '#ff6b6b' : stat.value >= 100 ? '#4a90e2' : '#888';
+          return `
+            <tr style="border-bottom: 1px solid var(--table-border-color);">
+              <td style="padding: 12px; font-weight: 600;">${stat.name}</td>
+              <td style="padding: 12px; text-align: center; font-weight: bold; color: var(--national-dex-number-color);">${stat.value}</td>
+              <td style="padding: 12px;">
+                <div style="background: var(--table-background-color); border-radius: 4px; overflow: hidden; height: 20px;">
+                  <div style="background: ${barColor}; width: ${percentage}%; height: 100%; transition: width 0.3s;"></div>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+        <tr style="background-color: var(--table-background-color); font-weight: bold;">
+          <td style="padding: 12px;">合計</td>
+          <td style="padding: 12px; text-align: center; color: var(--national-dex-number-color); font-size: 1.1rem;">${total}</td>
+          <td style="padding: 12px;"></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+  
+  document.getElementById('statsTable').innerHTML = tableHTML;
+};
+
+const drawPolygon = (svg, centerX, centerY, radius, sides, fill, stroke, strokeWidth) => {
+  const points = [];
+  const angleStep = (Math.PI * 2) / sides;
+  
+  for (let i = 0; i < sides; i++) {
+    const angle = angleStep * i - Math.PI / 2;
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
+    points.push(`${x},${y}`);
+  }
+  
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('points', points.join(' '));
+  polygon.setAttribute('fill', fill);
+  polygon.setAttribute('stroke', stroke);
+  polygon.setAttribute('stroke-width', strokeWidth);
+  svg.appendChild(polygon);
 };
 
 const pokedexNameTranslations = {
