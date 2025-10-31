@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポケモン情報検索</title>
 <style>
+/* ... (スタイルシートは省略、前回のものと同じ) ... */
 :root {
   --background-color: #f5f5f5;
   --text-color: #333;
@@ -365,6 +366,27 @@ tr:last-child td {
   display: block;
 }
 
+/* 進化ツリー表示用のスタイル */
+#pokemonEvolution ul {
+    list-style: none;
+    padding-left: 20px;
+    border-left: 2px dashed #ccc;
+    margin: 5px 0;
+}
+#pokemonEvolution li {
+    position: relative;
+    padding-left: 20px;
+}
+#pokemonEvolution li:before {
+    content: '└';
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 1.2rem;
+    color: #999;
+}
+
+
 @media (max-width: 600px) {
   h1 {
     font-size: 1.5rem;
@@ -397,7 +419,7 @@ tr:last-child td {
 </head>
 <body>
   <div class="container">
-    <h1>🔍 ポケモン情報検索 v510273</h1>
+    <h1>🔍 ポケモン情報検索 v202510301</h1>
     
     <div class="search-section">
       <div class="search-controls">
@@ -426,23 +448,28 @@ tr:last-child td {
     
     <div id="pokemonTabs" class="tabs hidden">
       <div class="tab-buttons">
-        <button class="tab-button active" onclick="switchTab('image')">🖼️ 画像</button>
-        <button class="tab-button" onclick="switchTab('basic')">📊 基本情報</button>
+        <button class="tab-button active" onclick="switchTab('basic')">📊 基本情報</button>
         <button class="tab-button" onclick="switchTab('stats')">⚡ 種族値</button>
+        <button class="tab-button" onclick="switchTab('evolution')">🔄 進化/フォーム</button>
+        <button class="tab-button" onclick="switchTab('image')">🖼️ 画像</button>
         <button class="tab-button" onclick="switchTab('dex')">📖 図鑑情報</button>
       </div>
       
       <div class="tab-content">
-        <div id="imageTab" class="tab-panel active">
-          <div id="pokemonImage"></div>
-        </div>
-        
-        <div id="basicTab" class="tab-panel">
+        <div id="basicTab" class="tab-panel active">
           <table id="pokemonBasicInfo"></table>
         </div>
         
         <div id="statsTab" class="tab-panel">
           <div id="pokemonStats"></div>
+        </div>
+        
+        <div id="evolutionTab" class="tab-panel">
+          <div id="pokemonEvolution"></div>
+        </div>
+        
+        <div id="imageTab" class="tab-panel">
+          <div id="pokemonImage"></div>
         </div>
         
         <div id="dexTab" class="tab-panel">
@@ -471,10 +498,11 @@ const switchTab = (tabName) => {
   document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
   
   const buttons = document.querySelectorAll('.tab-button');
-  if (tabName === 'image') buttons[0].classList.add('active');
-  else if (tabName === 'basic') buttons[1].classList.add('active');
-  else if (tabName === 'stats') buttons[2].classList.add('active');
-  else if (tabName === 'dex') buttons[3].classList.add('active');
+  if (tabName === 'basic') buttons[0].classList.add('active');
+  else if (tabName === 'stats') buttons[1].classList.add('active');
+  else if (tabName === 'evolution') buttons[2].classList.add('active');
+  else if (tabName === 'image') buttons[3].classList.add('active');
+  else if (tabName === 'dex') buttons[4].classList.add('active');
   
   document.getElementById(tabName + 'Tab').classList.add('active');
 };
@@ -506,16 +534,19 @@ const generationTranslations = {
   "generation-ix": "第9世代",
 };
 
+// 名前からIDへのマッピングロード処理は省略せず残します
 const loadNameToIdMapping = async () => {
   if (nameToIdCache) return nameToIdCache;
   
   try {
+    // API呼び出しは一度で済むように簡略化を推奨しますが、現状のコードを維持します。
     const response = await fetch('https://pokeapi.co/api/v2/pokemon-species?limit=2000');
     if (!response.ok) throw new Error("ポケモンリストの取得に失敗しました。");
     const data = await response.json();
     
     nameToIdCache = {};
     
+    // 全ポケモンの名前とIDをキャッシュする（時間がかかる可能性があるが、一度実行すれば高速化）
     await Promise.all(data.results.map(async (pokemon) => {
       try {
         const speciesResponse = await fetch(pokemon.url);
@@ -615,7 +646,7 @@ const fetchTypeJapaneseNames = async (types) => {
       const response = await fetch(typeInfo.type.url);
       if (!response.ok) throw new Error("タイプの日本語名の取得に失敗しました。");
       const data = await response.json();
-      const japaneseName = data.names.find(name => name.language.name === "ja").name;
+      const japaneseName = data.names.find(name => n.language.name === "ja").name;
       return japaneseName;
     }));
     return typeNames.join(', ');
@@ -632,7 +663,7 @@ const fetchAbilityJapaneseNames = async (abilities) => {
       const res = await fetch(url);
       if (!res.ok) throw new Error("特性名の取得に失敗しました。");
       const data = await res.json();
-      let japaneseName = data.names.find(name => name.language.name === "ja")?.name;
+      let japaneseName = data.names.find(n => n.language.name === "ja")?.name;
       if (ability.is_hidden) {
         japaneseName = `<span class="hidden-ability">${japaneseName} (夢)</span>`;
       } else {
@@ -650,20 +681,55 @@ const fetchEggGroupJapaneseNames = async (eggGroups) => {
       const res = await fetch(url);
       if (!res.ok) throw new Error("タマゴグループ名の取得に失敗しました。");
       const data = await res.json();
-      return data.names.find(name => name.language.name === "ja-Hrkt")?.name ?? group.name;
+      // ja-Hrkt (日本語ヒラガナカタカナ) を優先的に使用
+      return data.names.find(n => n.language.name === "ja-Hrkt")?.name ?? group.name;
     })
   );
   return eggGroupNames.join(", ");
 };
 
+// =========================================================================
+// 進化先の重複を排除し、条件を統合するヘルパー関数 (Pythonのロジックを反映)
+// =========================================================================
+
+/**
+ * 同じポケモンIDを持つ進化先を統合し、その進化条件(evolutionDetails)をマージします。
+ * @param {Array<Object>} evolvesToArray - レベル内の進化先オブジェクトの配列
+ * @returns {Array<Object>} - 統合された進化先オブジェクトの配列
+ */
+const deduplicateAndMergeEvolutions = (evolvesToArray) => {
+    const mergedMap = new Map();
+    
+    evolvesToArray.forEach(evo => {
+        const id = evo.id;
+        
+        if (!mergedMap.has(id)) {
+            // 新しいエントリの場合、そのまま追加（evolutionDetailsはコピー）
+            mergedMap.set(id, { ...evo, evolutionDetails: [...evo.evolutionDetails] });
+        } else {
+            // 既存のエントリの場合、新しいevolutionDetailsを既存のリストに結合（マージ）
+            const existingEvo = mergedMap.get(id);
+            existingEvo.evolutionDetails.push(...evo.evolutionDetails);
+        }
+    });
+    
+    return Array.from(mergedMap.values());
+};
+
+// =========================================================================
+// ★ 修正 1: fetchEvolutionChain 関数 進化・フォームの安定化
+// =========================================================================
+
 const fetchEvolutionChain = async (evolutionChainUrl, currentSpeciesId) => {
   try {
-    const response = await fetch(evolutionChainUrl);
-    if (!response.ok) return null;
-    const data = await response.json();
+    const evolutionResponse = await fetch(evolutionChainUrl);
+    if (!evolutionResponse.ok) {
+        console.warn("進化チェーンのURLが無効です。");
+        return { tree: null, flattened: [], varieties: await fetchVarieties(currentSpeciesId) };
+    }
+    const data = await evolutionResponse.json();
     
-    const allEvolutions = [];
-    
+    // 1. 進化ツリーの構築 (再帰関数)
     const processChain = async (evoData, depth = 0) => {
       const speciesUrl = evoData.species.url;
       const speciesId = speciesUrl.split('/').filter(x => x).pop();
@@ -676,7 +742,8 @@ const fetchEvolutionChain = async (evolutionChainUrl, currentSpeciesId) => {
         name: japaneseName,
         id: speciesId,
         depth: depth,
-        evolvesTo: []
+        evolvesTo: [],
+        evolutionDetails: evoData.evolution_details || []
       };
       
       if (evoData.evolves_to && evoData.evolves_to.length > 0) {
@@ -691,22 +758,33 @@ const fetchEvolutionChain = async (evolutionChainUrl, currentSpeciesId) => {
     
     const tree = await processChain(data.chain);
     
-    const flattenTree = (node, result = []) => {
-      if (!result[node.depth]) {
-        result[node.depth] = [];
-      }
-      result[node.depth].push({
-        name: node.name,
-        id: node.id
-      });
-      
-      for (const child of node.evolvesTo) {
-        flattenTree(child, result);
-      }
-      
-      return result;
+    // 2. ツリーからフラット化リストを生成し、重複を統合
+    const flattenAndDeduplicateTree = (node, result = []) => {
+        if (!result[node.depth]) {
+            result[node.depth] = [];
+        }
+        
+        result[node.depth].push({
+            name: node.name,
+            id: node.id,
+            evolutionDetails: node.evolutionDetails
+        });
+        
+        for (const child of node.evolvesTo) {
+            flattenAndDeduplicateTree(child, result);
+        }
+        
+        return result;
     };
+
+    let flattenedRaw = flattenAndDeduplicateTree(tree);
     
+    const flattened = flattenedRaw.map(level => {
+        // 同じレベル内で重複している進化先（ライチュウなど）を統合
+        return deduplicateAndMergeEvolutions(level);
+    });
+    
+    // 3. フォーム情報の取得 (Pythonロジックを反映: 正確なIDと名前の取得)
     const fetchVarieties = async (speciesId) => {
       try {
         const speciesResponse = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${speciesId}/`);
@@ -719,25 +797,48 @@ const fetchEvolutionChain = async (evolutionChainUrl, currentSpeciesId) => {
               const pokemonResponse = await fetch(variety.pokemon.url);
               const pokemonData = await pokemonResponse.json();
               const pokemonId = pokemonData.id;
+              const nameSlug = variety.pokemon.name;
               
               let formName = '';
+              
+              // フォーム名を取得 (優先度: 日本語フォーム名 > 英語フォーム名 > スラッグ名)
               if (pokemonData.forms && pokemonData.forms.length > 0) {
                 const formResponse = await fetch(pokemonData.forms[0].url);
                 const formData = await formResponse.json();
                 const japaneseFormName = formData.form_names.find(n => n.language.name === "ja")?.name;
-                if (japaneseFormName) {
-                  formName = japaneseFormName;
-                } else {
-                  formName = formData.name;
-                }
+                const englishFormName = formData.form_names.find(n => n.language.name === "en")?.name;
+                
+                formName = japaneseFormName || englishFormName || nameSlug;
+              } else {
+                  // formsリストが空の場合 (Pythonコードの特殊フォーム処理を反映)
+                  // 例: メガシンカや一部のリージョンフォーム
+                  if (nameSlug.includes('mega')) formName = nameSlug.replace(/-/g, ' ') + ' (メガ)';
+                  else if (nameSlug.includes('gmax')) formName = nameSlug.replace(/-/g, ' ') + ' (キョダイ)';
+                  else if (nameSlug.includes('alola')) formName = 'アローラ地方のすがた';
+                  else if (nameSlug.includes('galar')) formName = 'ガラル地方のすがた';
+                  else if (nameSlug.includes('hisui')) formName = 'ヒスイ地方のすがた';
+                  else if (nameSlug.includes('paldea')) formName = 'パルデア地方のすがた';
+                  else formName = nameSlug;
+              }
+              
+              // フォーム名の整形 (特定の接尾辞を削除/調整)
+              if (formName.includes(speciesData.name)) {
+                  formName = formName.replace(speciesData.name + '-', '');
+                  formName = formName.replace(speciesData.name, '');
+                  formName = formName.trim();
+              }
+              
+              // フォーム名がない場合はポケモン名全体から推測
+              if (!formName) {
+                  formName = nameSlug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
               }
               
               varieties.push({
-                name: formName || variety.pokemon.name,
+                name: formName || nameSlug,
                 id: pokemonId.toString(),
-                isMega: variety.pokemon.name.includes('mega'),
-                isGmax: variety.pokemon.name.includes('gmax'),
-                isRegional: variety.pokemon.name.includes('alola') || variety.pokemon.name.includes('galar') || variety.pokemon.name.includes('hisui') || variety.pokemon.name.includes('paldea')
+                isMega: nameSlug.includes('mega'),
+                isGmax: nameSlug.includes('gmax'),
+                isRegional: nameSlug.includes('alola') || nameSlug.includes('galar') || nameSlug.includes('hisui') || nameSlug.includes('paldea')
               });
             } catch (error) {
               console.error(`フォーム ${variety.pokemon.name} の取得に失敗:`, error);
@@ -746,7 +847,7 @@ const fetchEvolutionChain = async (evolutionChainUrl, currentSpeciesId) => {
           }
         }
         
-        return varieties;
+        return varieties.sort((a, b) => parseInt(a.id) - parseInt(b.id)); // ID順にソート
       } catch (error) {
         console.error("フォーム情報の取得に失敗:", error);
         return [];
@@ -757,7 +858,7 @@ const fetchEvolutionChain = async (evolutionChainUrl, currentSpeciesId) => {
     
     return {
       tree: tree,
-      flattened: flattenTree(tree),
+      flattened: flattened,
       varieties: currentVarieties
     };
   } catch (error) {
@@ -774,6 +875,7 @@ const fetchPokemonDetails = async (pokemonId) => {
     return;
   }
 
+  // 強制的なキャッシュクリアロジックを削除し、キャッシュヒットを利用（高速化のため）
   if (cache[pokemonIdTrimmed]) {
     const cachedData = cache[pokemonIdTrimmed];
     createInfoTable(cachedData.speciesData, cachedData.pokemonData, cachedData.japaneseName, cachedData.imageUrl, cachedData.shinyImageUrl, cachedData.colorJapaneseName, cachedData.typeJapaneseNames, cachedData.weight, cachedData.abilitiesJapaneseNames, cachedData.height, cachedData.eggGroupJapaneseNames, cachedData.generationJapaneseName, cachedData.evolutionChain);
@@ -786,7 +888,6 @@ const fetchPokemonDetails = async (pokemonId) => {
   document.getElementById('loadingMessage').classList.remove('hidden');
 
   try {
-    // まずpokemon APIを試す
     let pokemonData;
     let speciesData;
     
@@ -795,7 +896,6 @@ const fetchPokemonDetails = async (pokemonId) => {
       if (!pokemonResponse.ok) throw new Error("Pokemon not found");
       pokemonData = await pokemonResponse.json();
       
-      // speciesデータを取得
       const speciesResponse = await fetch(pokemonData.species.url);
       if (!speciesResponse.ok) throw new Error("Species not found");
       speciesData = await speciesResponse.json();
@@ -812,17 +912,33 @@ const fetchPokemonDetails = async (pokemonId) => {
     
     const evolutionChain = await fetchEvolutionChain(speciesData.evolution_chain.url, speciesData.id.toString());
 
-    // フォーム名を取得
-    let japaneseName = speciesData.names.find(name => name.language.name === "ja")?.name ?? "不明";
+    let japaneseName = speciesData.names.find(n => n.language.name === "ja")?.name ?? pokemonData.name;
     
-    // メガシンカやフォームの場合、フォーム名を取得して追加
+    // フォーム名を取得し、基本名に追加
     if (pokemonData.id !== speciesData.id && pokemonData.forms && pokemonData.forms.length > 0) {
       try {
         const formResponse = await fetch(pokemonData.forms[0].url);
         const formData = await formResponse.json();
         const japaneseFormName = formData.form_names.find(n => n.language.name === "ja")?.name;
         if (japaneseFormName) {
-          japaneseName = japaneseFormName;
+           // フォーム名が基本名と異なる場合のみ付与
+           if (!japaneseName.includes(japaneseFormName)) {
+               japaneseName += ` (${japaneseFormName})`;
+           }
+        } else {
+             // 日本語フォーム名がない場合、英語フォーム名またはスラッグから推測して表示
+            const englishFormName = formData.form_names.find(n => n.language.name === "en")?.name;
+            const nameSlug = pokemonData.name;
+            let formName = englishFormName || nameSlug.replace(/-/g, ' ').replace(speciesData.name, '').trim();
+
+            if (formName.includes('mega')) formName = 'メガシンカ';
+            else if (formName.includes('gmax')) formName = 'キョダイマックス';
+            else if (formName.includes('alola')) formName = 'アローラのすがた';
+            else if (formName.includes('galar')) formName = 'ガラルのすがた';
+            else if (formName.includes('hisui')) formName = 'ヒスイのすがた';
+            else if (formName.includes('paldea')) formName = 'パルデアのすがた';
+            
+            if(formName) japaneseName += ` (${formName})`;
         }
       } catch (error) {
         console.error("フォーム名の取得に失敗:", error);
@@ -865,6 +981,166 @@ const fetchPokemonDetails = async (pokemonId) => {
   }
 };
 
+// =========================================================================
+// ★ 新規追加: 進化ツリーを再帰的にレンダリングする関数 (見やすさ重視)
+// =========================================================================
+
+const renderEvolutionCondition = (details) => {
+  if (!details || details.length === 0) return '';
+  
+  const itemTranslations = {
+    'fire-stone': 'ほのおのいし', 'water-stone': 'みずのいし', 'thunder-stone': 'かみなりのいし',
+    'leaf-stone': 'リーフのいし', 'moon-stone': 'つきのいし', 'sun-stone': 'たいようのいし',
+    'shiny-stone': 'ひかりのいし', 'dusk-stone': 'やみのいし', 'dawn-stone': 'めざめのいし',
+    'ice-stone': 'こおりのいし', 'kings-rock': 'おうじゃのしるし', 'metal-coat': 'メタルコート',
+    'dragon-scale': 'りゅうのウロコ', 'upgrade': 'アップグレード', 'protector': 'プロテクター',
+    'electirizer': 'エレキブースター', 'magmarizer': 'マグマブースター', 'dubious-disc': 'あやしいパッチ',
+    'reaper-cloth': 'れいかいのぬの', 'razor-claw': 'するどいツメ', 'razor-fang': 'するどいキバ',
+    'oval-stone': 'まんまるいし', 'prism-scale': 'きれいなウロコ', 'deep-sea-tooth': 'しんかいのキバ',
+    'deep-sea-scale': 'しんかいのウロコ', 'sachet': 'においぶくろ', 'whipped-dream': 'ホイップポップ',
+    'linking-cord': 'つながりのヒモ'
+  };
+  
+  const triggerTranslations = {
+    'level-up': 'レベルアップ', 'use-item': '道具使用', 'trade': '通信交換', 'shed': 'ぬけがら', 'other': '特殊'
+  };
+  
+  const locationTranslations = {
+    'eterna-forest': 'ハクタイのもり', 'pinwheel-forest': 'ヤグルマのもり', 'kalos-route-20': 'カロス20番道路',
+    'sinnoh-route-217': 'シンオウ217番道路', 'twist-mountain': 'ネジやま', 'frost-cavern': 'フロストケイブ'
+  };
+  
+  const typeTranslations = {
+    'fairy': 'フェアリー', 'normal': 'ノーマル', 'fighting': 'かくとう', 'fire': 'ほのお',
+    'water': 'みず', 'grass': 'くさ', 'electric': 'でんき', 'psychic': 'エスパー',
+    'ice': 'こおり', 'dragon': 'ドラゴン', 'dark': 'あく', 'bug': 'むし', 'poison': 'どく',
+    'ground': 'じめん', 'rock': 'いわ', 'ghost': 'ゴースト', 'steel': 'はがね', 'flying': 'ひこう'
+  };
+  
+  const conditions = [];
+  details.forEach(detail => {
+    const parts = [];
+    
+    // 道具使用はトリガーを省略
+    if (detail.item) {
+      const itemName = itemTranslations[detail.item.name] || detail.item.name;
+      parts.push(`${itemName}`);
+    } else if (detail.trigger) {
+      const triggerName = triggerTranslations[detail.trigger.name] || detail.trigger.name;
+      parts.push(triggerName);
+    }
+    
+    if (detail.min_level) parts.push(`Lv${detail.min_level}`);
+    
+    if (detail.min_happiness) parts.push(`なつき度${detail.min_happiness}以上`);
+    if (detail.min_beauty) parts.push(`うつくしさ${detail.min_beauty}以上`);
+    if (detail.min_affection) parts.push(`なかよし度${detail.min_affection}以上`);
+    
+    if (detail.time_of_day) {
+      const timeMap = { 'day': '昼', 'night': '夜', 'dusk': '夕方' };
+      parts.push(`(${timeMap[detail.time_of_day] || detail.time_of_day})`);
+    }
+    
+    if (detail.location) {
+      const locationName = locationTranslations[detail.location.name] || detail.location.name.replace(/-/g, ' ');
+      parts.push(`${locationName}`);
+    }
+    
+    if (detail.held_item) {
+      const itemName = itemTranslations[detail.held_item.name] || detail.held_item.name;
+      parts.push(`持ち物:${itemName}`);
+    }
+    
+    if (detail.known_move) parts.push(`技:${detail.known_move.name}`);
+    
+    if (detail.known_move_type) {
+      const typeName = typeTranslations[detail.known_move_type.name] || detail.known_move_type.name;
+      parts.push(`${typeName}タイプの技`);
+    }
+    
+    if (detail.party_species) parts.push(`${detail.party_species.name}が手持ち`);
+    
+    if (detail.party_type) {
+      const typeName = typeTranslations[detail.party_type.name] || detail.party_type.name;
+      parts.push(`${typeName}タイプが手持ち`);
+    }
+    
+    if (detail.relative_physical_stats !== null) {
+      if (detail.relative_physical_stats === 1) parts.push('攻撃>防御');
+      else if (detail.relative_physical_stats === -1) parts.push('防御>攻撃');
+      else if (detail.relative_physical_stats === 0) parts.push('攻撃=防御');
+    }
+    
+    if (detail.needs_overworld_rain) parts.push('雨天時');
+    if (detail.turn_upside_down) parts.push('本体を逆さま');
+    if (detail.gender !== null) parts.push(detail.gender === 1 ? '♀のみ' : '♂のみ');
+    
+    if (parts.length > 0) {
+      conditions.push(parts.join(' + '));
+    }
+  });
+  
+  if (conditions.length === 0) return '特殊条件';
+  
+  // 統合された条件を " or " で結合
+  return conditions.join(' <span style="color:#999; font-weight: bold;">OR</span> ');
+};
+
+const renderEvolutionTree = (node, currentPokemonId) => {
+    let html = '';
+    
+    // 現在のポケモンの表示
+    const isCurrentPokemon = node.id === currentPokemonId.toString();
+    const style = isCurrentPokemon 
+        ? 'display:inline-block; padding:4px 8px; background:var(--national-dex-number-color); color:white; border-radius:4px; font-weight:bold; transition: all 0.2s;' 
+        : 'display:inline-block; padding:4px 8px; background:var(--table-background-color); border:1px solid var(--table-border-color); border-radius:4px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s;';
+    const hoverStyle = isCurrentPokemon ? '' : 'onmouseover="this.style.borderColor=\'var(--national-dex-number-color)\'; this.style.boxShadow=\'0 2px 4px rgba(0,0,0,0.1)\'" onmouseout="this.style.borderColor=\'var(--table-border-color)\'; this.style.boxShadow=\'none\'"';
+    const onclick = isCurrentPokemon ? '' : `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${node.id}'; fetchPokemonDetails('${node.id}');"`;
+    
+    html += `<span style="${style}" ${onclick} ${hoverStyle}>${node.name} <small style="color:${isCurrentPokemon ? 'white' : '#888'};">No.${node.id.padStart(4, '0')}</small></span>`;
+    
+    // 進化条件の表示
+    if (node.evolutionDetails && node.evolutionDetails.length > 0) {
+        // 同じポケモンIDを持つ要素が複数ある場合があるため、重複排除と統合をここで行う (理論上はfetchEvolutionChainで処理済み)
+        const consolidatedDetails = deduplicateAndMergeEvolutions([{ id: node.id, evolutionDetails: node.evolutionDetails }])[0].evolutionDetails;
+        const conditionText = renderEvolutionCondition(consolidatedDetails);
+        if (conditionText) {
+            html += `<div style="font-size:0.8rem; color:#666; margin-top:5px; padding:4px 0;"> <span style="font-weight: bold; color: #4a90e2;">条件:</span> ${conditionText}</div>`;
+        }
+    }
+
+    // 次の進化先がある場合、<ul>で再帰的にリスト化
+    if (node.evolvesTo && node.evolvesTo.length > 0) {
+        // 次のレベルのポケモンが複数いる場合に対応するため、ここで重複を統合
+        const nextLevel = deduplicateAndMergeEvolutions(node.evolvesTo.map(e => ({
+            name: e.name,
+            id: e.id,
+            evolutionDetails: e.evolutionDetails // e.evolutionDetailsは1つの条件セット
+        })));
+        
+        html += '<ul style="list-style:none; padding-left:25px; margin:5px 0;">';
+        nextLevel.forEach(nextEvo => {
+             // 次の進化先のノードを作成
+             const nextNode = node.evolvesTo.find(e => e.id === nextEvo.id);
+             
+             // nextEvoには統合されたevolutionDetailsが入っているため、それをnextNodeに適用
+             const evolvedNodeWithMergedDetails = {
+                 ...nextNode,
+                 evolutionDetails: nextEvo.evolutionDetails // 統合された全条件を適用
+             };
+             
+             html += `<li style="margin-top:10px;">${renderEvolutionTree(evolvedNodeWithMergedDetails, currentPokemonId)}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    return html;
+};
+
+// =========================================================================
+// ★ 修正 2: createInfoTable 関数 (進化ツリーとフォーム表示のロジック変更)
+// =========================================================================
+
 const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shinyImageUrl, colorJapaneseName, typeJapaneseNames, weight, abilities, height, eggGroupJapaneseNames, generationJapaneseName, evolutionChain) => {
   const formattedNationalNumber = pokemonData.id.toString().padStart(4, '0');
   
@@ -873,11 +1149,12 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
     <div class="generation">No. ${formattedNationalNumber} | ${generationJapaneseName}</div>
   `;
 
+  // ... (基本情報、画像、種族値のテーブル作成ロジックは省略) ...
   const createImageHtml = (url, alt, label) => {
     if (url) {
       return `
       <div class="image-frame">
-        <img src="${url}" alt="${alt}" class="pokemon-image" />
+        <img src="${url}" alt="${alt}" class="pokemon-image" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png'" />
         <div class="image-label">${label}</div>
       </div>`;
     } else {
@@ -898,94 +1175,6 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
     { label: '高さ', value: `${heightInMeters} m` },
     { label: 'タマゴグループ', value: eggGroupJapaneseNames }
   ];
-  
-  // 進化情報を追加
-  if (evolutionChain && evolutionChain.flattened && evolutionChain.flattened.length > 1) {
-    const renderEvolutionLevel = (level, currentPokemonId) => {
-      return level.map(evo => {
-        const isCurrentPokemon = evo.id === currentPokemonId;
-        const style = isCurrentPokemon 
-          ? 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--national-dex-number-color); border-radius:8px; font-weight:bold; color:var(--national-dex-number-color); text-align:center; vertical-align:top;' 
-          : 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
-        const hoverStyle = isCurrentPokemon ? '' : 'onmouseover="this.style.borderColor=\'var(--national-dex-number-color)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--table-border-color)\'; this.style.transform=\'translateY(0)\'"';
-        const onclick = isCurrentPokemon ? '' : `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${evo.id}'; fetchPokemonDetails('${evo.id}');"`;
-        return `<span style="${style}" ${onclick} ${hoverStyle}>${evo.name}<br><small style="color:#888;">No.${evo.id.padStart(4, '0')}</small></span>`;
-      }).join(' ');
-    };
-    
-    const evolutionHtml = evolutionChain.flattened.map((level, index) => {
-      const levelHtml = renderEvolutionLevel(level, speciesData.id.toString());
-      const arrow = index < evolutionChain.flattened.length - 1 
-        ? '<div style="text-align:left; margin:8px 0; font-size:1.5rem; color:#888; padding-left:4px;">↓</div>' 
-        : '';
-      return `<div style="text-align:left; margin:8px 0;">${levelHtml}</div>${arrow}`;
-    }).join('');
-    
-    basicInfoPairs.push({ label: '進化', value: `<div style="padding:10px;">${evolutionHtml}</div>` });
-  }
-  
-  // メガシンカ・フォーム情報を追加
-  if (evolutionChain && evolutionChain.varieties && evolutionChain.varieties.length > 0) {
-    const renderVarieties = (varieties) => {
-      const megaForms = varieties.filter(v => v.isMega);
-      const gmaxForms = varieties.filter(v => v.isGmax);
-      const regionalForms = varieties.filter(v => v.isRegional);
-      const otherForms = varieties.filter(v => !v.isMega && !v.isGmax && !v.isRegional);
-      
-      let html = '';
-      
-      if (megaForms.length > 0) {
-        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#ff6b6b;">メガシンカ:</strong><br>';
-        html += megaForms.map(form => {
-          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); border:2px solid #764ba2; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
-          const hoverStyle = 'onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'"';
-          const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
-          return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small>No.${form.id.padStart(4, '0')}</small></span>`;
-        }).join(' ');
-        html += '</div>';
-      }
-      
-      if (gmaxForms.length > 0) {
-        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#ff6b6b;">キョダイマックス:</strong><br>';
-        html += gmaxForms.map(form => {
-          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border:2px solid #f5576c; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
-          const hoverStyle = 'onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'"';
-          const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
-          return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small>No.${form.id.padStart(4, '0')}</small></span>`;
-        }).join(' ');
-        html += '</div>';
-      }
-      
-      if (regionalForms.length > 0) {
-        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#4a90e2;">リージョンフォーム:</strong><br>';
-        html += regionalForms.map(form => {
-          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border:2px solid #00f2fe; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600;';
-          const hoverStyle = 'onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'"';
-          const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
-          return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small>No.${form.id.padStart(4, '0')}</small></span>`;
-        }).join(' ');
-        html += '</div>';
-      }
-      
-      if (otherForms.length > 0) {
-        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#888;">その他のフォーム:</strong><br>';
-        html += otherForms.map(form => {
-          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
-          const hoverStyle = 'onmouseover="this.style.borderColor=\'var(--national-dex-number-color)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--table-border-color)\'; this.style.transform=\'translateY(0)\'"';
-          const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
-          return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small style="color:#888;">No.${form.id.padStart(4, '0')}</small></span>`;
-        }).join(' ');
-        html += '</div>';
-      }
-      
-      return html;
-    };
-    
-    const varietiesHtml = renderVarieties(evolutionChain.varieties);
-    if (varietiesHtml) {
-      basicInfoPairs.push({ label: 'フォーム', value: `<div style="padding:10px;">${varietiesHtml}</div>` });
-    }
-  }
 
   basicInfoPairs.forEach(pair => {
     const row = document.createElement('tr');
@@ -1008,9 +1197,88 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
     </div>
   `;
 
-  // 種族値レーダーチャートを作成
   createStatsRadarChart(pokemonData.stats);
+  // ... (種族値チャート作成ロジックは省略) ...
 
+
+  // 進化情報タブの作成
+  let evolutionHtml = '';
+  
+  if (evolutionChain && evolutionChain.tree) {
+    evolutionHtml += `<div style="padding:10px;">
+      <h3 style="margin-top:0;">進化系統 (ツリー表示)</h3>
+      <div style="font-size: 1rem; padding: 10px; border: 1px solid var(--table-border-color); border-radius: 8px;">
+        ${renderEvolutionTree(evolutionChain.tree, speciesData.id.toString())}
+      </div>
+    </div>`;
+  }
+  
+  // メガシンカ・フォーム情報の表示 (fetchVarietiesで取得したものを利用)
+  if (evolutionChain && evolutionChain.varieties && evolutionChain.varieties.length > 0) {
+    const renderVarieties = (varieties) => {
+      const megaForms = varieties.filter(v => v.isMega).sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+      const gmaxForms = varieties.filter(v => v.isGmax).sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+      const regionalForms = varieties.filter(v => v.isRegional).sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+      const otherForms = varieties.filter(v => !v.isMega && !v.isGmax && !v.isRegional).sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+      
+      let html = '';
+      
+      const renderFormBox = (form, color, gradient) => {
+        const style = `display:inline-block; width:200px; padding:8px 12px; margin:4px; background:${gradient || color}; border:2px solid ${color}; border-radius:8px; cursor:pointer; color:white; transition: all 0.2s; text-align:center; vertical-align:top; font-weight:600; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`;
+        const hoverStyle = 'onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'0 2px 4px rgba(0,0,0,0.1)\'"';
+        const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
+        
+        const formNameDisplay = form.name.includes(' ') ? form.name.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') : form.name;
+
+        return `<span style="${style}" ${onclick} ${hoverStyle}>${formNameDisplay}<br><small>No.${form.id.padStart(4, '0')}</small></span>`;
+      };
+      
+      if (megaForms.length > 0) {
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#ff6b6b;">メガシンカ:</strong><br>';
+        html += megaForms.map(form => renderFormBox(form, '#764ba2', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)')).join(' ');
+        html += '</div>';
+      }
+      
+      if (gmaxForms.length > 0) {
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#f5576c;">キョダイマックス:</strong><br>';
+        html += gmaxForms.map(form => renderFormBox(form, '#f5576c', 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)')).join(' ');
+        html += '</div>';
+      }
+      
+      if (regionalForms.length > 0) {
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#4a90e2;">リージョンフォーム:</strong><br>';
+        html += regionalForms.map(form => renderFormBox(form, '#00f2fe', 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)')).join(' ');
+        html += '</div>';
+      }
+      
+      if (otherForms.length > 0) {
+        html += '<div style="margin-bottom:12px; text-align:left;"><strong style="color:#888;">その他のフォーム:</strong><br>';
+        html += otherForms.map(form => {
+          const style = 'display:inline-block; width:200px; padding:8px 12px; margin:4px; background:var(--table-background-color); border:2px solid var(--table-border-color); border-radius:8px; cursor:pointer; color:var(--national-dex-number-color); transition: all 0.2s; text-align:center; vertical-align:top;';
+          const hoverStyle = 'onmouseover="this.style.borderColor=\'var(--national-dex-number-color)\'; this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.borderColor=\'var(--table-border-color)\'; this.style.transform=\'translateY(0)\'"';
+          const onclick = `onclick="document.getElementById('pokemonName').value=''; document.getElementById('pokemonId').value='${form.id}'; fetchPokemonDetails('${form.id}');"`;
+          return `<span style="${style}" ${onclick} ${hoverStyle}>${form.name}<br><small style="color:#888;">No.${form.id.padStart(4, '0')}</small></span>`;
+        }).join(' ');
+        html += '</div>';
+      }
+      
+      return html;
+    };
+    
+    const varietiesHtml = renderVarieties(evolutionChain.varieties);
+    if (varietiesHtml) {
+      evolutionHtml += `<div style="padding:10px;"><h3>別フォーム</h3>${varietiesHtml}</div>`;
+    }
+  }
+  
+  // 進化情報がない場合のメッセージ
+  if (!evolutionHtml.includes('進化系統') && !evolutionHtml.includes('別フォーム')) {
+    evolutionHtml = '<div style="padding:20px; text-align:center; color:#888;">進化情報はありません</div>';
+  }
+  
+  document.getElementById('pokemonEvolution').innerHTML = evolutionHtml;
+
+  // ... (図鑑情報テーブル作成ロジックは省略) ...
   const dexTableBody = document.createElement('tbody');
   speciesData.pokedex_numbers.forEach(entry => {
     const row = document.createElement('tr');
@@ -1034,6 +1302,7 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
   document.getElementById('pokemonDexInfo').appendChild(dexTableBody);
 };
 
+// ... (createStatsRadarChart 関数と drawPolygon 関数は省略せずそのまま使用) ...
 const createStatsRadarChart = (stats) => {
   const statNames = {
     'hp': 'HP',
@@ -1213,6 +1482,7 @@ const drawPolygon = (svg, centerX, centerY, radius, sides, fill, stroke, strokeW
   svg.appendChild(polygon);
 };
 
+
 const pokedexNameTranslations = {
   "national": "全国図鑑",
   "kanto": "カントー図鑑",
@@ -1264,4 +1534,3 @@ const navigateDex = (offset) => {
 </script>
 </body>
 </html>
-
