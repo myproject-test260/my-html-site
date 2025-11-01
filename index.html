@@ -422,7 +422,7 @@ tr:last-child td {
 </head>
 <body>
   <div class="container">
-    <h1>🔍 ポケモン情報検索 v202511014</h1>
+    <h1>🔍 ポケモン情報検索 v202511016</h1>
     
     <div class="search-section">
       <div class="search-controls">
@@ -1020,31 +1020,56 @@ const fetchPokemonDetails = async (pokemonId) => {
         }
     } else if (pokemonData.id.toString() !== speciesData.id.toString()) {
         // 通常のID検索でフォームだった場合(例: ロトムの別形態)
-        try {
-            const formResponse = await fetch(pokemonData.forms[0].url);
-            const formData = await formResponse.json();
-            const japaneseFormName = formData.form_names.find(n => n.language.name === "ja")?.name;
-            
-            if (japaneseFormName) {
-               if (!japaneseName.includes(japaneseFormName)) {
-                   japaneseName += ` (${japaneseFormName})`;
-               }
-            } else {
-                const englishFormName = formData.form_names.find(n => n.language.name === "en")?.name;
-                const nameSlug = pokemonData.name;
-                let formName = englishFormName || nameSlug.replace(/-/g, ' ').replace(speciesData.name, '').trim();
-
-                if (formName.includes('mega')) formName = 'メガシンカ';
-                else if (formName.includes('gmax')) formName = 'キョダイマックス';
-                else if (formName.includes('alola')) formName = 'アローラのすがた';
-                else if (formName.includes('galar')) formName = 'ガラルのすがた';
-                else if (formName.includes('hisui')) formName = 'ヒスイのすがた';
-                else if (formName.includes('paldea')) formName = 'パルデアのすがた';
+        let formName = '';
+        
+        // 1. forms 配列が存在する場合のみ、フォーム名の取得を試みる
+        if (pokemonData.forms && pokemonData.forms.length > 0) {
+            try {
+                const formResponse = await fetch(pokemonData.forms[0].url);
+                const formData = await formResponse.json();
+                const japaneseFormName = formData.form_names.find(n => n.language.name === "ja")?.name;
                 
-                if(formName) japaneseName += ` (${formName})`;
+                if (japaneseFormName) {
+                   if (!japaneseName.includes(japaneseFormName)) {
+                       formName = japaneseFormName;
+                   }
+                } else {
+                    const englishFormName = formData.form_names.find(n => n.language.name === "en")?.name;
+                    if(englishFormName) formName = englishFormName;
+                }
+            } catch (error) {
+                console.error("フォーム名の取得に失敗(forms[0].url):", error);
+                // エラー時はスラグからの推測にフォールバック (formNameは''のまま)
             }
-        } catch (error) {
-            console.error("フォーム名の取得に失敗:", error);
+        }
+
+        // 2. フォーム名が取得できなかった場合 (formsが空, エラー, 名前なし etc.)
+        //    ポケモンのスラッグ名 (pokemonData.name) から推測する
+        if (!formName) {
+            const nameSlug = pokemonData.name; // 例: "dragonite-mega"
+            const speciesNameSlug = speciesData.name; // 例: "dragonite"
+            
+            // "dragonite-mega" -> "mega"
+            let processedName = nameSlug.replace(speciesNameSlug, '').replace(/-/g, ' ').trim();
+
+            // 固有名に変換
+            if (nameSlug.includes('mega')) processedName = 'メガシンカ';
+            else if (nameSlug.includes('gmax')) processedName = 'キョダイマックス';
+            else if (nameSlug.includes('alola')) processedName = 'アローラのすがた';
+            else if (nameSlug.includes('galar')) processedName = 'ガラルのすがた';
+            else if (nameSlug.includes('hisui')) processedName = 'ヒスイのすがた';
+            else if (nameSlug.includes('paldea')) processedName = 'パルデアのすがた';
+            else if (processedName) {
+                // "heat" (ロトムなど) -> "Heat"
+                processedName = processedName.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+            }
+            
+            formName = processedName;
+        }
+
+        // 最終的なフォーム名を基本名に追加
+        if(formName) {
+            japaneseName += ` (${formName})`;
         }
     }
     
@@ -1304,8 +1329,8 @@ const createInfoTable = (speciesData, pokemonData, japaneseName, imageUrl, shiny
     evolutionHtml += `<div style="padding:10px;">
       <h3 style="margin-top:0;">進化系統 (クリックで詳細表示)</h3>
       <div style="font-size: 1rem; padding: 10px; border: 1px solid var(--table-border-color); border-radius: 8px;">
-        ${renderEvolutionTree(evolutionChain.tree, speciesData.id.toString())}
-      </div>
+        ${renderEvolutionTree(evolutionChain.tree, pokemonData.id.toString())} 
+        </div>
     </div>`;
   }
   
