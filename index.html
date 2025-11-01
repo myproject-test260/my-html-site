@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポケモン情報検索</title>
 <style>
-/
-/ 生成AIで作った
-?
 /* -------------------------------------- */
 /* 1. CSS スタイルシート (変更なし) */
 /* -------------------------------------- */
@@ -425,7 +422,7 @@ tr:last-child td {
 </head>
 <body>
   <div class="container">
-    <h1>🔍 ポケモン情報検索 v202511013</h1>
+    <h1>🔍 ポケモン情報検索 v202511014</h1>
     
     <div class="search-section">
       <div class="search-controls">
@@ -944,17 +941,17 @@ const fetchPokemonDetails = async (pokemonId) => {
 
   try {
     
-    // IDが数値でない場合（フォームスラッグの場合）
+    // IDが数値でない場合は、ハイフンの有無に関わらずスラッグとして扱う
     if (isNaN(pokemonIdTrimmed)) {
-        formNameForDisplay = pokemonIdTrimmed; // 例: "arceus-fighting"
+        formNameForDisplay = pokemonIdTrimmed;
         
-        // 1. pokemon-form/arceus-fighting から情報を取得
+        // 1. pokemon-form/slug から情報を取得
         const formResponse = await fetch(`https://pokeapi.co/api/v2/pokemon-form/${formNameForDisplay}`);
         if (!formResponse.ok) throw new Error("Form not found");
         const formData = await formResponse.json();
         
-        // ★★★ 修正: formData.id を使って個別のポケモンデータを取得 ★★★
-        const pokemonResponse = await fetch(`https://pokeapi.co/api/v2/pokemon/${formData.id}/`);
+        // 2. フォームデータから本体のポケモンデータを取得 (stats, typesなどを取得するため)
+        const pokemonResponse = await fetch(formData.pokemon.url);
         if (!pokemonResponse.ok) throw new Error("Pokemon not found via form");
         pokemonData = await pokemonResponse.json();
         
@@ -962,12 +959,12 @@ const fetchPokemonDetails = async (pokemonId) => {
         const speciesResponse = await fetch(pokemonData.species.url);
         if (!speciesResponse.ok) throw new Error("Species not found");
         speciesData = await speciesResponse.json();
-    
+
         // 画像URLをフォームのSpritesに上書き
         pokemonData.sprites = formData.sprites;
         // IDをフォームスラッグに上書き (表示・キャッシュキー用)
         pokemonData.id = formNameForDisplay;
-    
+
     } else {
         // 通常の数値IDでの検索 (例: 201, 25)
         try {
@@ -1601,4 +1598,3 @@ const drawPolygon = (svg, centerX, centerY, radius, sides, fill, stroke, strokeW
 </script>
 </body>
 </html>
-
